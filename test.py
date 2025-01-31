@@ -56,35 +56,46 @@ import time
 
 # 创建一个 JavaScript 代码执行上下文
 
-with open('test.js', 'r', encoding='utf-8') as f:
+with open('sig356.js', 'r', encoding='utf-8') as f:
     code = f.read()
 
-ctx = execjs.compile(code)
-
 # 测试 Fibonacci 函数的执行时间
-def test_pyexecjs_fibonacci(n):
+def test_pyexecjs_fibonacci(n, func_name='fibonacci'):
+    init_time = time.time()
+    ctx = execjs.compile(code)
+    end_init_time = time.time()
+    init_time_cost = end_init_time - init_time
+    print(f"pyexecjs Initialization Time: {init_time_cost:.6f} seconds")
     start_time = time.time()
     # 调用 JavaScript 中的 fibonacci 函数
-    result = ctx.call("fibonacci", n)
+    result = ctx.call(func_name, n)
     end_time = time.time()
-    print(f"fibonacci({n}) = {result}")
-    print(f"Execution Time: {end_time - start_time:.6f} seconds")
+    # print(f"{func_name}({n}) = {result}")
+    print(f"pyexecjs---> {result[:12]}")
+    runtime = end_time - start_time
+    print(f"Execution Time: {runtime:.6f} seconds; total time {runtime+init_time_cost:.6f}")
 
 
-def test_pyjsruntime_fibonacci(n):
+def test_pyjsruntime_fibonacci(n, func_name='fibonacci'):
     
     # result = JsRuntime().eval(code)
     # result = JsRuntime().eval("new Date('2023-07-20')")
-    
+    init_time = time.time()
     ctx = JsRuntime().compile(code)
-    print(type(ctx))
+    end_init_time = time.time()
+    init_time_cost = end_init_time - init_time
+    print(f"PyJsRuntime Initialization Time: {init_time_cost:.6f} seconds")
+    # print(f"PyJsRuntime Initialization Time: {end_init_time - init_time:.6f} seconds")
+    # print(type(ctx))
     start_time = time.time()
-    result = ctx.call("fibonacci", [n])
+    result = ctx.call(func_name, [n])
     end_time = time.time()
-    print(f"result = {result}")
-    print(f"Execution Time: {end_time - start_time:.6f} seconds")
+    print(f"PyJsRuntime---> {result[:12]}")
+    runtime = end_time - start_time
+    # print(f"{func_name} {n} = {result}")
+    print(f"Execution Time: {runtime:.6f} seconds; total time {runtime+init_time_cost:.6f}")
 
 # 测试性能
 if __name__ == "__main__":
-    test_pyexecjs_fibonacci(40)  # 你可以调整数字来测试不同的性能
-    test_pyjsruntime_fibonacci(40)  # 你可以调整数字来测试不同的性能
+    test_pyexecjs_fibonacci('/rest/wd/cny2025/warmup/richtree/luckShake/drawsigCatVer=1{"entrySource":"ks_cny_158"}', func_name='getSig3')  # 你可以调整数字来测试不同的性能
+    test_pyjsruntime_fibonacci('/rest/wd/cny2025/warmup/richtree/luckShake/drawsigCatVer=1{"entrySource":"ks_cny_158"}', func_name='getSig3')  # 你可以调整数字来测试不同的性能
