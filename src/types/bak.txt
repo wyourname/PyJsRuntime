@@ -1,0 +1,147 @@
+use pyo3::prelude::*;
+use pyo3::exceptions::{PyException, PyValueError};
+use pyo3::types::{PyString, PyFloat, PyBool, PyDict, PyList, PyDateTime, PyBytes};
+use deno_core::v8;
+use std::ffi::c_void;
+use std::slice;
+
+pub fn js_to_py<'a>(py: Python<'_>, scope: &mut v8::HandleScope<'a>, value: v8::Local<'a, v8::Value>) -> PyResult<PyObject> {
+    // match (){
+    //     _ if value.is_null() => return Ok(py.None()),
+    //     _ if value.is_undefined() => return Ok(py.None()),
+    //     _ if value.is_string() => {
+    //         let string = value.to_rust_string_lossy(scope);
+    //         return Ok(PyString::new(py, &string).into());
+    //     },
+    //     _ if value.is_number() => {
+    //         if let Some(num) = value.number_value(scope) {}
+    //     }
+    // }
+
+    if value.is_null() || value.is_undefined() {
+        return Ok(py.None());
+    }
+    
+    // 如果是字符串
+    if value.is_string() {
+        let string = value.to_rust_string_lossy(scope);
+        return Ok(PyString::new(py, &string).into());
+    }
+
+
+    // 如果是数字
+    if value.is_number() {
+        if let Some(num) = value.number_value(scope) {
+            if num.fract() == 0.0 {
+                return Ok((num as i64).into_py(py)); // 转换为 PyInt
+            } else {
+                return Ok(PyFloat::new(py, num).into()); // 转换为 PyFloat
+            }
+        }
+    }
+
+    // 如果是布尔值
+    if value.is_boolean() {
+        let val = value.boolean_value(scope);
+        return Ok(PyBool::new(py, val).into_py(py));
+    }
+
+    // 如果是 BigInt
+    if value.is_big_int() {
+        let big_int = v8::Local::<v8::BigInt>::try_from(value).unwrap();
+        let (signed_value, _) = big_int.i64_value();
+        return Ok(signed_value.into_py(py));
+    }
+
+    // 如果是 Date
+    if value.is_date() {
+        let date = v8::Local::<v8::Date>::try_from(value).unwrap();
+        let timestamp = date.value_of();
+        let seconds = (timestamp / 1000.0) as i64;
+        // let microseconds = ((timestamp % 1000.0) * 1000.0) as u32;
+        
+        // 创建 Python datetime 对象
+        let datetime = PyDateTime::from_timestamp(py, seconds as f64, None)?;
+        return Ok(datetime.into());
+    }
+
+    // 如果是数组
+    if value.is_array() {
+        let array = v8::Local::<v8::Array>::try_from(value).unwrap();
+        let py_list = PyList::empty(py);
+        for i in 0..array.length() {
+            if let Some(item) = array.get_index(scope, i) {
+                let py_item = js_to_py(py, scope, item)?;
+                py_list.append(py_item)?;
+            }
+        }
+        return Ok(py_list.into());
+    }
+
+    // 如果是对象
+    if value.is_object() {
+        let object = value.to_object(scope).unwrap();
+        let py_dict = PyDict::new(py);
+        // 获取对象的所有属性名
+        // let context = scope.get_current_context();
+        let mut args = v8::GetPropertyNamesArgs::default();
+        args.mode = v8::KeyCollectionMode::OwnOnly;
+        args.property_filter = v8::PropertyFilter::ALL_PROPERTIES;
+        let names = object.get_property_names(scope, args);
+
+        if let Some(names) = names {
+            for i in 0..names.length() {
+                if let Some(key) = names.get_index(scope, i) {
+                    let key_str = key.to_rust_string_lossy(scope);
+                    if let Some(prop_value) = object.get(scope, key) {
+                        let py_value = js_to_py(py, scope, prop_value)?;
+                        py_dict.set_item(key_str, py_value)?;
+                    }
+                }
+            }
+        }
+        return Ok(py_dict.into());
+    }
+
+    if value.is_array_buffer() || value.is_array_buffer_view() {
+        // 获取存储
+        let store_result: Result<_, PyErr> = {
+            if value.is_array_buffer() {
+                let buffer = v8::Local::<v8::ArrayBuffer>::try_from(value)
+                    .map_err(|_| PyErr::new::<PyValueError, _>("Failed to convert to ArrayBuffer"))?;
+                Ok(buffer.get_backing_store())
+            } else {
+                return Err(PyErr::new::<PyValueError, _>("Not an ArrayBuffer"));
+            }
+        };
+        
+        let store = store_result.map_err(|e| PyException::new_err(e.to_string()))?;
+    
+        // 获取数据范围和指针
+        let (offset, len) = if value.is_array_buffer_view() {
+            let view = v8::Local::<v8::ArrayBufferView>::try_from(value).unwrap();
+            (view.byte_offset(), view.byte_length())
+        } else {
+            (0, store.byte_length())
+        };
+        if offset == 0 && len == 0 {
+            return Err(PyException::new_err("Invalid offset or length"));
+        }
+    
+        let data_ptr = store.data().ok_or(PyException::new_err("Invalid backing store"))?;
+        let bytes = unsafe {
+            std::slice::from_raw_parts(data_ptr.as_ptr().add(offset), len)
+        };
+        let bytes_len = bytes.len() * std::mem::size_of::<c_void>();
+
+        // 将 &c_void 转换为 &[u8]
+        let byte_slice: &[u8] = unsafe {
+            slice::from_raw_parts(bytes.as_ptr() as *const u8, bytes_len)
+        };
+    
+        return Ok(PyBytes::new(py, byte_slice).into())
+    }
+
+    // 如果是其他类型，按需处理
+    Err(pyo3::exceptions::PyTypeError::new_err("Unsupported JavaScript value"))
+}
