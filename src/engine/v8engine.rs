@@ -4,7 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyList;
 use parking_lot::RwLock;
 use pyo3::exceptions::{PyValueError, PyRuntimeError};
-use std::{collections::HashMap, result};
+use std::collections::HashMap;
 use std::sync::Arc;
 use crate::types::convert::{js_to_py, py_to_js};
 

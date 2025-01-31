@@ -65,9 +65,9 @@ ctx = execjs.compile(code)
 def test_pyexecjs_fibonacci(n):
     start_time = time.time()
     # 调用 JavaScript 中的 fibonacci 函数
-    result = ctx.call("getSig3", n)
+    result = ctx.call("fibonacci", n)
     end_time = time.time()
-    print(f"getSig3({n}) = {result}")
+    print(f"fibonacci({n}) = {result}")
     print(f"Execution Time: {end_time - start_time:.6f} seconds")
 
 
@@ -79,12 +79,12 @@ def test_pyjsruntime_fibonacci(n):
     ctx = JsRuntime().compile(code)
     print(type(ctx))
     start_time = time.time()
-    result = ctx.call("getSig3", [n])
+    result = ctx.call("fibonacci", [n])
     end_time = time.time()
-    print(f"result = {result[:12]}")
+    print(f"result = {result}")
     print(f"Execution Time: {end_time - start_time:.6f} seconds")
 
 # 测试性能
 if __name__ == "__main__":
-    # test_pyexecjs_fibonacci('/rest/wd/cny2025/warmup/richtree/luckShake/drawsigCatVer=1{"entrySource":"ks_cny_158"}')  # 你可以调整数字来测试不同的性能
-    test_pyjsruntime_fibonacci('/rest/wd/cny2025/warmup/richtree/luckShake/drawsigCatVer=1{"entrySource":"ks_cny_158"}')  # 你可以调整数字来测试不同的性能
+    test_pyexecjs_fibonacci(40)  # 你可以调整数字来测试不同的性能
+    test_pyjsruntime_fibonacci(40)  # 你可以调整数字来测试不同的性能
