@@ -5,7 +5,7 @@ mod python;
 
 /// A Python module implemented in Rust.
 #[pymodule]
-fn PyJsRuntime(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn py_js_runtime(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<python::class::JsRuntime>()?;
     // m.add_class::<JsExecutor>()?;
     Ok(())

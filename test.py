@@ -1,4 +1,4 @@
-from PyJsRuntime import JsRuntime  # 我们的新库
+from py_js_runtime import JsRuntime  # 我们的新库
 import execjs
 import time
 import tracemalloc
@@ -10,14 +10,32 @@ with open('sig356.js', 'r', encoding='utf-8') as f:
 # 公共执行函数，计算初始化时间和执行时间，同时监控内存使用
 def execute_js(ctx, func_name, *args):
     tracemalloc.start()  # 开始跟踪内存分配
-
     init_time = time.time()
     ctx_compiled = ctx.compile(code)
     end_init_time = time.time()
     init_time_cost = end_init_time - init_time
-
     start_time = time.time()
-    result = ctx_compiled.call(func_name, *args)
+    for i in range(100):
+        result = ctx_compiled.call(func_name, *args)
+    end_time = time.time()
+    execution_time = end_time - start_time
+
+    # 获取当前内存分配的快照
+    current, peak = tracemalloc.get_traced_memory()
+
+    tracemalloc.stop()  # 停止内存跟踪
+
+    return init_time_cost, execution_time, result, current, peak
+
+def rt_execute_js(ctx, func_name, *args):
+    tracemalloc.start()  # 开始跟踪内存分配
+    init_time = time.time()
+    ctx_compiled = ctx.compile(code)
+    end_init_time = time.time()
+    init_time_cost = end_init_time - init_time
+    start_time = time.time()
+    for i in range(100):
+        result = ctx_compiled.call_function(func_name, *args)
     end_time = time.time()
     execution_time = end_time - start_time
 
@@ -38,7 +56,7 @@ def test_pyexecjs_fibonacci(n, func_name='fibonacci'):
 
 # 测试 PyJsRuntime 执行时间
 def test_pyjsruntime_fibonacci(n, func_name='fibonacci'):
-    init_time_cost, execution_time, result, current, peak = execute_js(JsRuntime(), func_name, [n])
+    init_time_cost, execution_time, result, current, peak = rt_execute_js(JsRuntime(), func_name, [n])
     print(f"PyJsRuntime Initialization Time: {init_time_cost:.6f} seconds")
     print(f"PyJsRuntime---> {result[:12]}")
     print(f"Execution Time: {execution_time:.6f} seconds; total time {execution_time + init_time_cost:.6f}")

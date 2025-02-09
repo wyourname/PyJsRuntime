@@ -3,11 +3,11 @@ use deno_core::{v8, JsRuntime, RuntimeOptions};
 use pyo3::prelude::*;
 use pyo3::types::PyList;
 use parking_lot::RwLock;
-use pyo3::exceptions::{PyValueError, PyRuntimeError};
 use std::collections::HashMap;
 use std::sync::Arc;
+use pyo3::exceptions::PyRuntimeError;
 use crate::types::convert::{js_to_py, py_to_js};
-
+use crate::types::error::JsError;
 
 // 标记为不可跨线程的Python类
 #[pyclass(unsendable)]
@@ -37,7 +37,7 @@ impl JsEngine {
     pub fn eval(&self, py: Python<'_>, code: String) -> PyResult<PyObject> {
         let mut runtime = self.runtime.write();
         let result = runtime.execute_script("<eval>", code)
-            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+            .map_err(|e| JsError::ExecutionError(e.to_string()))?;
         
         let scope = &mut runtime.handle_scope();
         let local = v8::Local::new(scope, result);
@@ -53,7 +53,7 @@ impl JsEngine {
 
         // 编译脚本
         let source = v8::String::new(scope, &code)
-            .ok_or_else(|| PyValueError::new_err("Invalid code"))?;
+            .ok_or_else(|| JsError::ExecutionError("Invalid code".to_string()))?;
 
         let script = v8::Script::compile(scope, source, None).ok_or_else(|| PyRuntimeError::new_err("Failed to compile script"))?;
         script.run(scope);
@@ -97,7 +97,7 @@ impl JsEngine {
 #[pymethods]
 impl PyContext {
     #[pyo3(signature = (name, args))]
-    fn call(&self, py: Python<'_>,name: String, args: &Bound<'_, PyList>) -> PyResult<PyObject> { 
+    fn call_function(&self, py: Python<'_>,name: String, args: &Bound<'_, PyList>) -> PyResult<PyObject> { 
         let functions = self.functions.read();
         let func = functions.get(&name)
             .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err(format!("Function {} not found", name)))?;
