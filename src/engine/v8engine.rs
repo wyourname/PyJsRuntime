@@ -21,6 +21,7 @@ pub struct JsEngine {
 pub struct PyContext {
     engine: Arc<JsEngine>,
     functions: RwLock<HashMap<String, v8::Global<v8::Function>>>,
+    properties: RwLock<HashMap<String, v8::Global<v8::Value>>>,
 }
 
 #[pymethods]
@@ -64,6 +65,7 @@ impl JsEngine {
         let names = global
             .get_property_names(scope, v8::GetPropertyNamesArgs::default())
             .ok_or_else(|| PyRuntimeError::new_err("Failed to get property names"))?;
+        let mut properties = HashMap::new();
         for i in 0..names.length() {
             let key = names
                 .get_index(scope, i)
@@ -84,12 +86,15 @@ impl JsEngine {
                 // println!("Function: {}", key_str);
                 // let function = func.unwrap();
                 functions.insert(key_str, v8::Global::new(scope, func));
+            }else {
+                properties.insert(key_str, v8::Global::new(scope, value));
             }
         }
 
         Ok(PyContext {
             engine: engine_arc,
             functions: RwLock::new(functions),
+            properties: RwLock::new(properties),
         })
     }
 }
@@ -140,4 +145,15 @@ impl PyContext {
             Err(result.unwrap_err())
         }
     }
+
+    fn get_property(&self, py: Python<'_>, expr: String) -> PyResult<PyObject> {
+        let properties = self.properties.read();
+        let property = properties.get(&expr)
+            .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err(format!("Property {} not found", expr)))?;
+        let mut rt = self.engine.runtime.write();
+        let scope = &mut rt.handle_scope();
+        let local = v8::Local::new(scope, property);
+        js_to_py(py, scope, local)           
+    }
+
 }

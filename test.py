@@ -62,20 +62,44 @@ def test_pyjsruntime_fibonacci(n, func_name='fibonacci'):
     print(f"Execution Time: {execution_time:.6f} seconds; total time {execution_time + init_time_cost:.6f}")
     print(f"Memory Usage: {current / 10**6:.2f} MB; Peak Memory: {peak / 10**6:.2f} MB")
 
+
+def test_pyjsruntime_eval(code):
+    ctx = JsRuntime().compile(code)
+    result = ctx.get_property('localStorage.getItem("a")')
+    print(result)
+
 # 性能对比
 if __name__ == "__main__":
     # 使用固定的函数名和参数进行测试
-    pyexecjs_start_time = time.time()
-    test_pyexecjs_fibonacci('/rest/wd/cny2025/warmup/richtree/luckShake/drawsigCatVer=1{"entrySource":"ks_cny_158"}', func_name='getSig3')
-    pyexecjs_end_time = time.time()
+    # pyexecjs_start_time = time.time()
+    # test_pyexecjs_fibonacci('/rest/wd/cny2025/warmup/richtree/luckShake/drawsigCatVer=1{"entrySource":"ks_cny_158"}', func_name='getSig3')
+    # pyexecjs_end_time = time.time()
 
-    pyjsruntime_start_time = time.time()
-    test_pyjsruntime_fibonacci('/rest/wd/cny2025/warmup/richtree/luckShake/drawsigCatVer=1{"entrySource":"ks_cny_158"}', func_name='getSig3')
-    pyjsruntime_end_time = time.time()
+    # pyjsruntime_start_time = time.time()
+    # test_pyjsruntime_fibonacci('/rest/wd/cny2025/warmup/richtree/luckShake/drawsigCatVer=1{"entrySource":"ks_cny_158"}', func_name='getSig3')
+    # pyjsruntime_end_time = time.time()
 
-    pyexecjs_total_time = pyexecjs_end_time - pyexecjs_start_time
-    pyjsruntime_total_time = pyjsruntime_end_time - pyjsruntime_start_time
+    # pyexecjs_total_time = pyexecjs_end_time - pyexecjs_start_time
+    # pyjsruntime_total_time = pyjsruntime_end_time - pyjsruntime_start_time
 
-    # 计算性能提升比例
-    performance_improvement = (pyexecjs_total_time - pyjsruntime_total_time) / pyexecjs_total_time * 100
-    print(f"Performance Improvement: {performance_improvement:.2f}%")
+    # # 计算性能提升比例
+    # performance_improvement = (pyexecjs_total_time - pyjsruntime_total_time) / pyexecjs_total_time * 100
+    # print(f"Performance Improvement: {performance_improvement:.2f}%")
+    data = r"""
+    localStorage = {
+    setItem: function(key, value) {
+        // 在这里存储数据
+        this[key] = value;
+    },
+    getItem: function(key) {
+        // 从这里获取数据
+        return this[key] || null;
+    },
+    removeItem: function(key) {
+        // 删除存储的数据
+        delete this[key];
+    }
+};
+    localStorage.setItem("a", '1')
+"""
+    test_pyjsruntime_eval(data)
