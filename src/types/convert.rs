@@ -208,10 +208,12 @@ fn handle_object(
                 keys.get_index(scope, i),
                 keys.get_index(scope, i).and_then(|k| obj.get(scope, k))
             ) {
-                py_dict.set_item(
+                if !value.is_function() {
+                    py_dict.set_item(
                     key.to_rust_string_lossy(scope),
-                    js_to_py(py, scope, value)?
-                )?;
+                  js_to_py(py, scope, value)?
+                    )?;
+                }  
             }
         }
     }
