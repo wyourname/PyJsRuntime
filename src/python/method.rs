@@ -17,8 +17,16 @@ impl JsRuntime {
         self.engine.borrow(py).eval(py, code)
     }
 
-    fn compile(&self, py: Python<'_>, code: String) -> PyResult<PyContext> {
+    fn compile_file(&self, py: Python<'_>, file_path: String) -> PyResult<PyContext> {
         let engine_ref = self.engine.borrow(py);
-        engine_ref.compile(py, code)
+        engine_ref.compile_file(py, file_path)
     }
+
+    fn compile_code(&self, py: Python<'_>, code: String) -> PyResult<PyContext> {
+        let engine_ref = self.engine.borrow(py);
+        engine_ref.compile_code(py, code)
+    }
+    
+
+
 }

@@ -12,8 +12,12 @@ crate-type = ["cdylib"]
 pyo3 = { version = "0.23.4", features = ["extension-module"] }
 pyo3-async-runtimes = { version = "0.23.0", features = ["attributes", "tokio-runtime"] }
 deno_core = "0.334.0"
-deno_node = "0.127.0"
+deno_node = "0.131.0"
+deno_npm = "0.27.0"
+node_resolver = "0.31.0"
 serde = { version = "1.0", features = ["derive"] }
-tokio = { version = "1.35", features = ["full"] }
+tokio = { version = "1.35", features = ["rt", "rt-multi-thread", "macros", "sync"] }
 futures = "0.3"
 parking_lot = "0.12.3"
+serde_json = "1.0"
+anyhow = "1.0"
